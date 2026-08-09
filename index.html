@@ -126,13 +126,14 @@ makeChart('c3','line', data.aud_months, lineByMonth(data.aud, data.aud_months, '
     borderColor:COLORS[i%COLORS.length], borderWidth:2, tension:0.2, pointRadius:3, spanGaps:true }));
   makeChart('c5','line', months, ds);
 }
-// ⑥ booster (陪玩) avg by month
+// ⑥ booster (陪玩) avg by month — grouped bar
 {
   const m=data.b_months;
   const ds=data.b_streamers.map((s,i)=>({
     label:s, data:m.map(ym=>{const r=data.boo[s]&&data.boo[s][ym]; return r?r.avg:null;}),
-    borderColor:COLORS[i%COLORS.length], borderWidth:2.2, tension:0.2, pointRadius:3.5, spanGaps:true }));
-  makeChart('c6','line', m, ds);
+    backgroundColor:COLORS[i%COLORS.length]+'99', borderColor:COLORS[i%COLORS.length],
+    borderWidth:1, borderRadius:3 }));
+  makeChart('c6','bar', m, ds);
 }
 </script>
 </body>
