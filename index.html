@@ -41,31 +41,19 @@ table.tbl tr:nth-child(even) td { background:#fcfcfc; }
 </div>
 
 <div class="chart-container">
-<h2>② 观众·场均观看时长（all_duration_avg，秒）——按月 × 主播</h2>
-<div class="desc">观众平均停留时长：阿贤约 19-21 分钟（1160/1269/1205s）最稳定；腰部主播 7-8月下滑明显：ven 840→683→412s、阿园 690→611→496s。</div>
-<div class="chart-wrap"><canvas id="c2"></canvas></div>
-</div>
-
-<div class="chart-container">
-<h2>③ 观众·场均峰值在线（max_online）——按月 × 主播</h2>
-<div class="desc">同时在线峰值：阿贤 6月→7月→8月持续下探，8月全部场次 &lt;1万（最大9428、均值约6000），"上不了一万人看"成立；腰部主播峰值远低（4千上下）。</div>
-<div class="chart-wrap"><canvas id="c3"></canvas></div>
-</div>
-
-<div class="chart-container">
-<h2>④ 观众·全时段趋势：场均峰值在线（max_online）——2025-11 ~ 2026-08（全部场次口径）</h2>
+<h2>② 观众·全时段趋势：场均峰值在线（max_online）——2025-11 ~ 2026-08（全部场次口径）</h2>
 <div class="desc">阿贤峰值在线：1-2月约 1.2~1.3万 → 8月 6020（<b>-50%以上</b>），"观众离开一半"在此口径下成立；腰部和头部同步下探。2025-11~05 无时长字段，无法过滤有效场次，统一用全部场次。</div>
 <div class="chart-wrap"><canvas id="c4"></canvas></div>
 </div>
 
 <div class="chart-container">
-<h2>⑤ 观众·全时段趋势：场均停留时长（all_duration_avg）——2025-11 ~ 2026-08（全部场次口径）</h2>
+<h2>③ 观众·全时段趋势：场均停留时长（all_duration_avg）——2025-11 ~ 2026-08（全部场次口径）</h2>
 <div class="desc">观众停留时长：阿贤 1-3月一度 1100~1500s，8月仍约 1205s 基本稳定；腰部 5-8月走低（ven 657→652→368s、阿园 595→562→496s）。</div>
 <div class="chart-wrap"><canvas id="c5"></canvas></div>
 </div>
 
 <div class="chart-container">
-<h2>⑥ 陪玩·场均陪玩数（booster，有效场次口径）——按月 × 主播</h2>
+<h2>④ 陪玩·场均陪玩数（booster，有效场次口径）——按月 × 主播</h2>
 <div class="desc">场均陪玩数：阿贤 13.9→12.9→11.4（-18%）最稳；腰部 8 月普遍下滑——ven 7.4→7.8→4.9、阿园 8.3→8.0→5.5、pink 8.0→8.2→5.4、阿美 10.0→11.0→6.0（8月仅2场）、志青 11.2→12.6→10.6。多数月份有陪玩场次占比 96~100%。</div>
 <div class="chart-wrap"><canvas id="c6"></canvas></div>
 </div>
@@ -100,11 +88,7 @@ function lineByMonth(map, months, key, labelPrefix){
 
 // ① watch_users by month
 makeChart('c1','line', data.aud_months, lineByMonth(data.aud, data.aud_months, 'watch'));
-// ② all_duration_avg by month
-makeChart('c2','line', data.aud_months, lineByMonth(data.aud, data.aud_months, 'dur'));
-// ③ max_online by month
-makeChart('c3','line', data.aud_months, lineByMonth(data.aud, data.aud_months, 'mx'));
-// ④ max_online full-timespan trend
+// ② max_online full-timespan trend
 {
   const t=data.trend, months=data.trend_months;
   const ds=data.trend_streamers.map((s,i)=>({
@@ -112,7 +96,7 @@ makeChart('c3','line', data.aud_months, lineByMonth(data.aud, data.aud_months, '
     borderColor:color(s), borderWidth:2, tension:0.2, pointRadius:3, spanGaps:true }));
   makeChart('c4','line', months, ds);
 }
-// ⑤ all_duration_avg full-timespan trend
+// ③ all_duration_avg full-timespan trend
 {
   const t=data.trend, months=data.trend_months;
   const ds=data.trend_streamers.map((s,i)=>({
@@ -120,7 +104,7 @@ makeChart('c3','line', data.aud_months, lineByMonth(data.aud, data.aud_months, '
     borderColor:color(s), borderWidth:2, tension:0.2, pointRadius:3, spanGaps:true }));
   makeChart('c5','line', months, ds);
 }
-// ⑥ booster (陪玩) avg by month — grouped bar
+// ④ booster (陪玩) avg by month — grouped bar
 {
   const m=data.b_months;
   const ds=data.b_streamers.map((s,i)=>({
