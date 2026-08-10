@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日维度观众与陪玩分析（有效场次）</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Microsoft YaHei', Arial, sans-serif; }
+.menubar { position:fixed; top:0; left:0; right:0; height:40px; background:#fff; border-bottom:1px solid #e0e0e0;
+  display:flex; align-items:center; gap:4px; padding:0 16px; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.menubar .brand { font-size:14px; font-weight:bold; color:#1a1a1a; margin-right:16px; }
+.menubar .tab { padding:6px 14px; border-radius:4px; font-size:13px; text-decoration:none; color:#333; }
+.menubar .tab:hover { background:#f0f0f0; }
+.menubar .tab.active { background:#2f54eb; color:#fff; }
+body { padding:64px 20px 20px; background:#f5f7fa; color:#1a1a1a; }
+h1 { font-size:22px; margin-bottom:4px; }
+.subtitle { color:#888; font-size:14px; margin-bottom:16px; }
+.controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:20px; }
+.controls button { padding:6px 14px; border:1px solid #d9d9d9; background:#fff; border-radius:4px;
+  font-size:13px; cursor:pointer; color:#333; }
+.controls button.active { background:#2f54eb; border-color:#2f54eb; color:#fff; }
+.controls .sep { width:1px; height:20px; background:#e0e0e0; margin:0 4px; }
+.switch { display:flex; align-items:center; gap:6px; font-size:13px; color:#666; cursor:pointer; user-select:none; }
+.switch input { accent-color:#2f54eb; }
+.summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.summary-card { background:#fff; border-radius:8px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:170px; }
+.summary-card .name { font-size:13px; color:#666; }
+.summary-card .val { font-size:20px; font-weight:bold; margin-top:4px; }
+.summary-card .delta { font-size:12px; margin-top:2px; }
+.summary-card .win { font-size:11px; color:#bbb; margin-top:2px; }
+.down { color:#cf1322; } .up { color:#389e0d; } .flat { color:#8c8c8c; }
+.chart-container { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:24px; }
+.chart-container h2 { font-size:16px; color:#333; margin-bottom:6px; }
+.chart-container .desc { font-size:12px; color:#999; margin-bottom:12px; }
+.chart-wrap { position:relative; width:100%; max-width:920px; margin:0 auto; }
+canvas { width:100% !important; }
+@media (max-width:640px){ body{padding:12px;} .summary-card{min-width:130px;} .chart-wrap{overflow-x:auto;} }
+</style>
+</head>
+<body>
+<div class="menubar">
+  <span class="brand">📊 主播数据分析</span>
+  <a href="viability_report.html" class="tab">分月版</a>
+  <a href="daily_report.html" class="tab active">分日版</a>
+</div>
+<h1>📊 日维度观众与陪玩分析（有效场次口径）</h1>
+<div class="subtitle">有效场次 = 时长&gt;1.5h · 数据 2026-06 起（更早无时长字段） · 细线=单日原始值，粗线=7日移动平均 · 2026-06-01 ~ 2026-08-09</div>
+
+<div class="controls">
+  <button class="active" data-days="0">全部</button>
+  <button data-days="90">近90天</button>
+  <button data-days="60">近60天</button>
+  <button data-days="30">近30天</button>
+  <button data-days="14">近14天</button>
+  <div class="sep"></div>
+  <label class="switch"><input type="checkbox" id="maToggle"> 显示 7 日移动平均</label>
+</div>
+
+<div class="summary" id="summaryRow"></div>
+
+<div class="chart-container">
+<h2>① 观众·每日场均观看人数（watch_users）——按日 × 主播</h2>
+<div class="desc">单日每主播仅 0~2 场，原始值噪声大；粗线为 7 日移动平均。可切顶部时间范围、关闭均线看原始。</div>
+<div class="chart-wrap"><canvas id="c1"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>② 观众·每日场均峰值在线（max_online）——按日 × 主播</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c2"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>③ 观众·每日场均停留时长（all_duration_avg）——按日 × 主播</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c3"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>④ 陪玩·每日场均陪玩数（booster）——按日 × 主播</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c4"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑤ 陪玩·每日总陪玩人次（全员合计）——按日</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c5"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑥ 钻石·每日钻石收入（streamer_income tt）——按日 × 主播</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c6"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑦ 直播·每日场均直播时长（有效场次，小时）——按日 × 主播</h2>
+<div class="desc"></div>
+<div class="chart-wrap"><canvas id="c7"></canvas></div>
+</div>
+
+<script>
+const data = {"dates": ["2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03", "2026-07-04", "2026-07-05", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10", "2026-07-11", "2026-07-12", "2026-07-13", "2026-07-14", "2026-07-15", "2026-07-16", "2026-07-17", "2026-07-18", "2026-07-19", "2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-25", "2026-07-26", "2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31", "2026-08-01", "2026-08-02", "2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07", "2026-08-08", "2026-08-09"], "streamers": ["pelun", "pink", "ven", "志青", "阿园", "阿美", "阿贤"], "aud": {"pelun": {"watch": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 6090, 5691, 5430], "mx": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 1559, 1185, 1013], "dur": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 771, 630, 681]}, "pink": {"watch": [null, 3242, 2703, 2925, 4450, 4633, 4739, 3937, 4268, 6168, null, 4392, 4485, 3570, null, null, 3254, 3278, 3268, 3480, 3197, null, 2842, 4835, 4922, 5437, 4689, 4630, 4401, 4319, 3591, 5781, 4376, 4609, 4840, null, 3676, 3935, 4853, 3502, 2337, 2341, null, 2126, 2376, 3155, 2694, 2746, 3097, null, 3370, 3680, 3479, 3957, 4622, 5147, 4551, 4052, 4406, null, null, 3649, 3748, 4187, null, 4003, 4306, 4002, 3601, 4054], "mx": [null, 870, 704, 705, 1278, 960, 1393, 1132, 810, 1248, null, 1013, 894, 995, null, null, 906, 783, 667, 934, 1207, null, 428, 826, 893, 1148, 844, 618, 663, 726, 578, 752, 797, 514, 768, null, 462, 425, 557, 352, 347, 364, null, 482, 446, 501, 363, 411, 457, null, 728, 940, 1133, 924, 976, 1006, 999, 819, 1296, null, null, 559, 851, 802, null, 656, 586, 591, 665, 576], "dur": [null, 975, 971, 674, 985, 865, 1107, 886, 696, 658, null, 568, 778, 907, null, null, 1068, 955, 812, 1082, 1294, null, 606, 593, 673, 623, 634, 541, 584, 626, 549, 532, 579, 437, 503, null, 488, 403, 390, 433, 567, 615, null, 783, 606, 513, 581, 665, 631, null, 859, 963, 1176, 1113, 874, 890, 911, 754, 1067, null, null, 693, 900, 800, null, 729, 579, 604, 698, 565]}, "ven": {"watch": [6735, 6333, null, 5981, 7370, 7385, 7946, 8618, 7063, 7249, 6911, 5587, 5137, 5338, 5989, 5045, 4418, 8020, 6277, 4831, 6211, 5645, 5606, 3805, null, 5922, 5193, 4717, 4321, 3796, 3665, null, 3713, 4462, 4487, 4864, 4617, 4019, 5843, 5041, 5034, 3845, 5612, 5591, null, 6170, 8884, 6305, 6104, null, 6308, null, null, null, null, null, null, 5353, 4673, 4729, 3907, 3745, 4522, 4158, null, null, 5451, 3558, 3102, null], "mx": [792, 1012, null, 956, 1599, 1650, 2030, 2065, 1862, 1680, 1604, 1340, 1006, 966, 1373, 1184, 435, 2162, 2012, 1201, 1812, 1348, 1031, 233, null, 1160, 1318, 1253, 1214, 652, 1024, null, 837, 1172, 1289, 1266, 1022, 1009, 1420, 953, 638, 719, 1187, 1039, null, 918, 739, 1222, 811, null, 1056, null, null, null, null, null, null, 911, 804, 720, 502, 403, 562, 484, null, null, 501, 348, 172, null], "dur": [460, 483, null, 641, 875, 841, 1029, 1020, 1167, 992, 1045, 781, 587, 647, 814, 904, 189, 1134, 1169, 963, 951, 731, 677, 195, null, 655, 1010, 1002, 1041, 586, 885, null, 940, 831, 1177, 771, 882, 646, 1111, 826, 468, 700, 866, 684, null, 591, 262, 591, 472, null, 365, null, null, null, null, null, null, 622, 488, 739, 416, 441, 473, 515, null, null, 351, 283, 248, null]}, "志青": {"watch": [null, null, 14922, 10635, null, null, null, null, null, null, 10099, 12595, 15128, 12740, null, 16298, null, 13470, 12365, 11907, 15312, null, 17639, null, null, null, 11727, 16357, 6437, 15008, 10921, 11600, 13375, 10865, 11926, null, 10906, 10173, 20674, 12242, 11505, 12667, null, 12640, 16687, 13054, 11808, 12280, 11572, null, 13483, 12621, 11282, 13761, null, 16255, null, 8907, 8152, 11899, 11569, 11765, 16811, null, 18511, 13980, 10648, 10514, 8775, null], "mx": [null, null, 3999, 3628, null, null, null, null, null, null, 3612, 3746, 4220, 4008, null, 3923, null, 3992, 3740, 3319, 3905, null, 4034, null, null, null, 3451, 4932, 345, 4719, 3255, 2313, 3586, 3532, 3421, null, 2507, 2755, 3683, 3740, 3309, 2979, null, 3800, 5080, 3157, 1940, 2545, 1900, null, 2316, 2400, 2310, 2696, null, 3940, null, 3049, 3127, 3427, 3307, 2939, 4427, null, 4228, 2257, 2146, 1562, 1321, null], "dur": [null, null, 983, 938, null, null, null, null, null, null, 1812, 1032, 987, 1251, null, 808, null, 1159, 922, 913, 852, null, 830, null, null, null, 1060, 1280, 150, 1157, 999, 800, 1170, 1243, 1098, null, 845, 1018, 883, 1243, 1160, 972, null, 1287, 1456, 1114, 719, 930, 530, null, 804, 807, 776, 858, null, 1290, null, 1496, 1657, 1242, 1066, 1075, 1371, null, 1092, 597, 784, 484, 572, null]}, "阿园": {"watch": [5042, 5785, 5409, 4745, null, 7068, 6700, 7680, 9156, 7569, null, 5955, 6040, 5169, 6753, 4578, 7524, null, 6009, 6535, 5221, 6545, 3904, 5740, null, 5476, null, 4200, 5269, 4550, 4211, null, 4259, 3371, 4315, 7043, 5084, 4591, null, 4829, 5463, 3782, 8930, 5382, 3465, null, 4168, 5188, 4891, null, 5739, 6223, null, null, null, null, null, 4335, 4299, null, 3752, 3887, 3278, 4528, 4023, 5292, null, 3207, 3316, 5300], "mx": [1078, 949, 576, 740, null, 1404, 1782, 2170, 1915, 1853, null, 954, 1153, 829, 1824, 1394, 1640, null, 1800, 1173, 1020, 1709, 474, 1251, null, 1229, null, 821, 1048, 772, 818, null, 782, 625, 891, 1690, 805, 1055, null, 1045, 1084, 652, 2583, 901, 231, null, 780, 384, 871, null, 733, 851, null, null, null, null, null, 825, 473, null, 532, 557, 355, 582, 886, 647, null, 573, 879, 1480], "dur": [541, 470, 359, 532, null, 619, 865, 890, 787, 908, null, 609, 676, 569, 742, 1040, 793, null, 1065, 587, 660, 695, 437, 739, null, 680, null, 636, 625, 603, 607, null, 680, 490, 731, 755, 601, 794, null, 683, 649, 583, 948, 683, 248, null, 574, 236, 650, null, 483, 610, null, null, null, null, null, 810, 396, null, 554, 463, 329, 409, 667, 447, null, 624, 1160, 1333]}, "阿美": {"watch": [7778, 6326, 5538, 5227, null, null, 5005, null, null, null, 7156, 6688, 5418, 7347, 8844, 7157, 7439, 7423, null, 6819, 6730, 6933, 12345, 7524, 6635, null, 9313, 9099, 7352, 6693, 6290, 6293, null, 7837, 6497, 5871, 6301, 6495, 6815, 5439, null, null, 3814, 4421, 7665, 7520, 8643, 7306, 7705, 7390, 7984, 7394, 6861, null, 5916, 5569, 5764, 4953, 4200, null, null, 4224, 5908, null, null, null, null, null, null, null], "mx": [1644, 1698, 1431, 1792, null, null, 650, null, null, null, 1611, 1619, 1311, 1627, 2336, 1738, 1464, 1301, null, 1619, 1243, 1536, 1769, 1773, 1588, null, 1677, 1673, 1423, 1566, 1566, 1605, null, 1246, 1348, 1238, 1387, 1076, 1260, 1430, null, null, 1120, 1140, 1951, 2147, 2068, 1898, 2165, 1705, 1950, 1294, 1376, null, 1359, 1295, 1667, 1649, 1406, null, null, 828, 1442, null, null, null, null, null, null, null], "dur": [788, 829, 930, 1210, null, null, 396, null, null, null, 877, 920, 941, 818, 1107, 1021, 826, 676, null, 926, 660, 902, 708, 899, 906, null, 684, 657, 736, 882, 881, 922, null, 613, 797, 866, 904, 705, 822, 1079, null, null, 1145, 933, 1138, 1270, 1031, 1092, 983, 1042, 1092, 812, 768, null, 1052, 992, 1378, 1329, 1394, null, null, 807, 1092, null, null, null, null, null, null, null]}, "阿贤": {"watch": [24772, 25248, 28213, 26604, null, null, null, null, null, null, null, 35585, 26754, 23025, 29236, 25635, null, null, 30025, 26503, 30888, 28965, 25248, 24962, null, 31678, 22702, 19405, 34007, 32121, 27419, null, 36422, 27062, 25527, 27676, 22702, 29181, null, 26394, 22373, 17847, null, 34417, 28036, null, 62585, 22065, 22332, null, 20933, null, null, null, null, null, null, 21800, 21546, null, 19794, 18512, 20357, 73719, 20681, 26268, null, 18589, 17905, 24105], "mx": [7630, 6673, 8005, 7920, null, null, null, null, null, null, null, 7478, 8184, 7905, 7399, 6591, null, null, 8284, 8635, 8781, 6252, 7424, 7357, null, 7580, 7060, 6770, 8588, 7845, 7797, null, 9201, 8875, 8434, 7464, 6842, 9018, null, 7152, 6891, 6602, null, 6100, 8407, null, 8516, 8346, 6397, null, 7656, null, null, null, null, null, null, 6107, 5842, null, 7127, 6129, 7017, 5041, 5547, 6687, null, 5699, 5975, 7802], "dur": [1229, 1089, 1122, 1216, null, null, null, null, null, null, null, 883, 1255, 1317, 1031, 1256, null, null, 1000, 1510, 1160, 933, 1176, 1219, null, 1048, 1295, 1527, 954, 975, 1208, null, 1100, 1271, 1369, 1158, 1244, 1305, null, 1161, 1395, 1675, null, 765, 1339, null, 1344, 1606, 1274, null, 1441, null, null, null, null, null, null, 1201, 1146, null, 1401, 1513, 1394, 597, 1145, 1254, null, 1331, 1471, 1325]}}, "boo": {"pelun": {"avg": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 5.0, 5.5, 5.5]}, "pink": {"avg": [null, 8.0, 7.5, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, null, 7.0, 8.0, 7.5, null, null, 8.0, 8.0, 8.0, 8.0, 8.0, null, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 10.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, null, 8.0, 9.0, 9.0, 7.5, 8.0, 7.5, null, 8.0, 8.5, 9.0, 9.0, 8.0, 8.5, null, 9.0, 8.0, 8.0, 8.5, 8.0, 8.0, 8.0, 9.0, 8.0, null, null, 5.0, 5.0, 5.5, null, 7.0, 5.0, 5.0, 5.0, 5.0]}, "ven": {"avg": [8.5, 9.5, null, 7.0, 7.5, 4.5, 4.5, 8.0, 10.0, 8.0, 8.0, 7.5, 7.5, 8.0, 8.0, 7.5, 0.0, 8.0, 8.0, 8.0, 7.5, 7.5, 7.0, 0.0, null, 8.0, 7.5, 8.0, 8.0, 7.0, 7.0, null, 7.5, 8.0, 7.0, 11.0, 7.5, 6.0, 8.0, 6.0, 7.5, 7.5, 8.0, 8.0, null, 9.0, 7.5, 8.0, 9.0, null, 7.0, null, null, null, null, null, null, 9.0, 8.0, 7.0, 7.5, 4.5, 4.5, 5.5, null, null, 5.0, 5.0, 5.0, null]}, "志青": {"avg": [null, null, 13.5, 13.0, null, null, null, null, null, null, 12.0, 11.0, 15.5, 11.0, null, 10.0, null, 12.5, 10.0, 11.0, 11.5, null, 11.5, null, null, null, 9.5, 12.0, 0.0, 9.0, 11.5, 14.0, 12.5, 13.5, 11.5, null, 9.5, 11.0, 17.0, 12.5, 12.5, 10.5, null, 10.0, 16.0, 13.0, 14.0, 9.0, 14.0, null, 12.0, 14.5, 12.0, 14.5, null, 12.0, null, 12.5, 13.0, 17.5, 12.5, 9.0, 14.0, null, 12.0, 9.0, 10.5, 9.5, 12.0, null]}, "阿园": {"avg": [9.0, 8.5, 8.0, 8.0, null, 8.0, 8.0, 8.0, 9.0, 8.0, null, 8.0, 8.0, 8.0, 11.0, 8.0, 8.0, null, 11.0, 8.0, 8.0, 8.0, 8.0, 8.0, null, 8.0, null, 8.0, 8.0, 8.0, 8.0, null, 8.0, 8.0, 9.0, 8.0, 8.0, 8.0, null, 7.5, 8.0, 8.0, 9.0, 8.0, 9.0, null, 9.5, 7.0, 8.0, null, 7.5, 8.0, null, null, null, null, null, 8.0, 7.5, null, 7.5, 5.5, 6.0, 6.0, 5.5, 5.0, null, 4.5, 6.0, 8.0]}, "阿美": {"avg": [9.0, 9.5, 10.0, 10.0, null, null, 0.0, null, null, null, 10.0, 10.0, 9.5, 10.5, 9.5, 9.5, 9.5, 10.0, null, 10.0, 9.7, 10.0, 12.0, 12.0, 11.0, null, 12.0, 10.5, 11.0, 11.5, 11.5, 11.5, null, 11.5, 12.0, 11.5, 12.5, 12.0, 12.0, 11.5, null, null, 10.5, 10.0, 12.5, 12.0, 10.0, 13.0, 12.0, 10.0, 12.5, 11.0, 10.7, null, 8.0, 10.3, 9.0, 10.0, 10.0, null, null, 6.0, 6.0, null, null, null, null, null, null, null]}, "阿贤": {"avg": [9.5, 13.0, 13.5, 12.5, null, null, null, null, null, null, null, 12.5, 15.0, 14.0, 16.5, 17.5, null, null, 14.0, 14.0, 12.5, 13.0, 14.5, 15.0, null, 15.5, 13.5, 14.0, 13.5, 14.0, 13.0, null, 14.5, 14.0, 14.0, 13.5, 12.5, 13.0, null, 11.5, 11.5, 12.0, null, 10.5, 16.5, null, 16.5, 12.0, 13.0, null, 12.0, null, null, null, null, null, null, 12.0, 10.0, null, 11.5, 11.0, 15.5, 11.5, 11.5, 10.0, null, 11.0, 9.5, 13.0]}}, "durs": {"pelun": {"h": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 1.99, 1.88, 2.01]}, "pink": {"h": [null, 1.88, 1.79, 1.63, 1.8, 1.94, 1.86, 1.71, 1.85, 1.78, null, 1.78, 1.81, 1.75, null, null, 1.95, 1.9, 1.86, 1.79, 1.86, null, 1.72, 1.81, 1.95, 1.94, 1.85, 1.84, 1.81, 1.85, 1.88, 1.98, 2.07, 1.87, 1.9, null, 1.97, 1.83, 1.82, 1.78, 2.02, 1.99, null, 1.88, 1.98, 2.05, 1.99, 1.95, 1.9, null, 1.9, 2.18, 1.87, 2.17, 1.91, 2.08, 1.96, 1.83, 1.81, null, null, 1.94, 1.92, 1.9, null, 2.01, 2.16, 1.91, 1.99, 1.89]}, "ven": {"h": [1.85, 1.79, null, 2.01, 1.99, 1.94, 1.87, 1.85, 1.88, 1.86, 2.0, 1.81, 1.88, 1.92, 1.8, 1.85, 1.52, 1.92, 1.87, 1.84, 1.87, 1.86, 1.91, 1.85, null, 1.9, 1.85, 1.83, 1.81, 1.84, 1.73, null, 1.84, 1.83, 1.94, 1.91, 1.85, 1.85, 1.88, 1.9, 1.83, 1.77, 1.87, 1.81, null, 1.78, 1.86, 1.93, 1.9, null, 1.92, null, null, null, null, null, null, 1.98, 1.72, 1.95, 1.78, 1.85, 2.04, 1.99, null, null, 1.75, 1.56, 1.78, null]}, "志青": {"h": [null, null, 1.96, 1.69, null, null, null, null, null, null, 2.3, 1.93, 2.03, 2.01, null, 1.99, null, 2.61, 2.18, 2.16, 2.17, null, 2.22, null, null, null, 2.24, 2.29, 1.66, 2.2, 2.04, 2.07, 2.1, 2.01, 2.09, null, 2.03, 1.84, 2.43, 1.96, 1.97, 2.16, null, 1.96, 2.01, 2.08, 2.05, 2.05, 1.68, null, 2.04, 2.06, 1.9, 2.3, null, 2.87, null, 2.05, 2.14, 2.27, 1.99, 2.09, 2.33, null, 1.93, 1.8, 1.66, 1.95, 1.71, null]}, "阿园": {"h": [1.79, 1.83, 1.86, 1.83, null, 1.93, 1.91, 1.89, 2.02, 1.89, null, 1.93, 1.84, 1.94, 1.68, 1.84, 1.92, null, 1.9, 1.95, 1.83, 1.77, 1.81, 2.08, null, 1.87, null, 1.81, 1.71, 1.98, 1.78, null, 1.76, 1.7, 1.87, 1.79, 1.85, 1.73, null, 1.78, 1.65, 1.91, 1.6, 1.92, 1.77, null, 1.81, 1.75, 1.98, null, 1.92, 1.89, null, null, null, null, null, 1.82, 1.85, null, 1.83, 1.83, 1.73, 1.65, 1.84, 1.73, null, 1.8, 1.85, 2.04]}, "阿美": {"h": [1.79, 1.73, 1.69, 1.83, null, null, 1.52, null, null, null, 1.95, 1.95, 1.9, 1.85, 2.01, 1.85, 1.92, 2.18, null, 2.23, 2.34, 2.26, 2.21, 2.34, 2.08, null, 2.22, 2.26, 2.01, 2.19, 2.12, 2.12, null, 2.16, 2.17, 2.36, 2.15, 2.15, 2.13, 1.98, null, null, 1.99, 2.06, 2.09, 1.99, 2.1, 1.92, 1.82, 2.01, 1.96, 1.94, 1.87, null, 1.9, 1.89, 2.01, 1.91, 2.06, null, null, 1.79, 1.75, null, null, null, null, null, null, null]}, "阿贤": {"h": [1.83, 1.9, 1.87, 2.2, null, null, null, null, null, null, null, 2.05, 1.98, 1.92, 2.01, 2.03, null, null, 2.18, 2.47, 2.26, 2.02, 2.05, 2.03, null, 2.08, 2.09, 2.02, 1.87, 1.95, 2.09, null, 2.12, 2.21, 1.99, 1.91, 1.84, 2.08, null, 1.95, 1.96, 1.99, null, 1.84, 2.11, null, 2.36, 1.92, 1.84, null, 1.72, null, null, null, null, null, null, 1.81, 1.77, null, 1.81, 2.01, 1.88, 1.63, 1.82, 1.94, null, 1.97, 1.92, 1.96]}}, "dia": {"pelun": {"tot": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 3294, 3333, 9028]}, "pink": {"tot": [null, 5045, 878, 3968, 6271, 6300, 9513, 1161, 2080, 1436, 1708, 2879, 1754, 1758, null, null, 8984, 5669, 919, 7205, 2836, null, 9619, 8510, 9056, 5553, 16989, 3747, 9357, 3858, 2736, 4373, 13655, 8859, 13509, null, 23378, 11173, 16954, 18840, 31366, 26431, 29, 428, 47262, 29448, 19698, 33639, 17913, null, 15537, 14958, 17115, 28931, 9175, 19856, 25243, 7030, 23630, 511, 39, 2034, 6432, 11833, null, 79590, 26114, 9342, 8920, 26958]}, "ven": {"tot": [3620, 2257, null, 5960, 12990, 3125, 7968, 6516, 3284, 5345, 4763, 3890, 4288, 2001, 1634, 5491, 6353, 8332, 13092, 7261, 4480, 7080, 1740, 5440, 142, 5055, 33110, 18069, 4550, 1028, 5450, 432, 14732, 1676, 13167, 25126, 9770, 4367, 5340, 9172, 7195, 22091, 10668, 15818, null, 20185, 24957, 23665, 18433, null, 20086, null, null, 425, 384, null, null, 22827, 4047, 9009, 50244, 24315, 25709, 27175, null, 7512, 10356, 11267, 3356, null]}, "志青": {"tot": [null, null, 6112, 3760, null, 576, null, null, null, null, 2759, 3957, 11629, 2390, null, 4705, 9690, 12450, 10144, 3630, 11252, null, 12529, null, null, null, 5924, 7857, 1663, 20404, 8329, 9922, 51781, 36801, 24880, null, 15578, 21980, 26155, 49473, 44858, 26126, 1235, 41599, 77113, 36216, 50048, 29408, 4861, null, 16212, 32471, 29305, 48805, null, 25638, null, 39751, 39498, 64840, 60196, 39760, 42592, null, 12440, 28701, 19546, 32982, 30581, 16823]}, "阿园": {"tot": [3317, 1829, 3262, 2089, null, 7654, 5902, 5689, 3661, 4773, null, 3010, 5328, 2672, 3192, 2686, 7675, null, 11457, 6067, 8029, 6474, 1150, 9311, null, 1429, 927, 5826, 2290, 4277, 1857, 105, 8069, 5819, 21315, 11187, 14246, 8175, null, 12697, 41896, 23046, 64676, 36116, 79845, 5064, 52786, 12030, 15522, null, 36506, 5573, null, null, null, null, null, 33385, 25100, null, 7369, 27812, 6508, 42012, 46782, 28861, null, 18122, 23785, 153432]}, "阿美": {"tot": [9940, 8335, 10788, 8443, 3674, null, 13742, 437, 3648, null, 7899, 10493, 4710, 7781, 7103, 7905, 14598, 45798, null, 21107, 15778, 8805, 6422, 10019, 12268, null, 27714, 9917, 6084, 20799, 13937, 21871, null, 22174, 13392, 9992, 22641, 13935, 21515, 38262, null, null, 8159, 29792, 295740, 94970, 80830, 162563, 60522, 14802, 40906, 2180, 47340, 9137, 28087, 74077, 98441, 20666, 29303, 6512, null, 7611, 11435, null, null, null, null, null, null, null]}, "阿贤": {"tot": [17950, 24255, 12105, 43976, 6572, null, 0, null, null, null, 13338, 39803, 26846, 17327, 14481, 20241, null, 17530, 17827, 93797, 33583, 26686, 18861, 22166, 8950, 13197, 53557, 12669, 27052, 28008, 29463, 13013, 26773, 43248, 56080, 10895, 18257, 46419, null, 30939, 94598, 31274, null, 80042, 328538, 10655, 442274, 44667, 81857, null, 19568, null, null, null, null, null, null, 42675, 17615, null, 20688, 133387, 152546, 51835, 46210, 74721, null, 59445, 113620, 64644]}}, "dboo": [72, 97, 105, 110, 31, 41, 41, 48, 46, 48, 38, 112, 119, 99, 90, 105, 51, 87, 102, 107, 124, 77, 99, 86, 27, 71, 101, 109, 91, 106, 111, 53, 101, 110, 116, 88, 108, 112, 66, 113, 95, 79, 46, 83, 100, 86, 110, 106, 115, 10, 96, 64, 72, 46, 40, 59, 43, 112, 95, 49, 78, 71, 76, 63, 46, 53, 41, 75, 75, 42], "summary": {"watch_ax_w1": 21110, "watch_ax_w2": 20402, "booster_ax_w1": 11, "booster_ax_w2": 12, "dboo_w1": 56.4, "dboo_w2": 74.9, "dia_w1": 157517, "dia_w2": 161251, "w1_label": "08-03 ~ 08-09", "w2_label": "07-27 ~ 08-02"}};
+const dates = data.dates, N = dates.length;
+const SC = {'阿贤':'#2f54eb','志青':'#52c41a','阿美':'#fa8c16','阿园':'#eb2f96','ven':'#13c2c2','pink':'#722ed1','pelun':'#f5222d','Dory':'#1890ff','peo':'#faad14'};
+function color(s){ return SC[s] || '#999'; }
+
+let winStart = 0, winEnd = N, showMA = false, charts = [];
+
+function makeMA(arr){
+  const out = new Array(arr.length).fill(null);
+  for (let i=0;i<arr.length;i++){
+    if (arr[i]==null) continue;
+    let s=0,c=0;
+    for (let k=-3;k<=3;k++){
+      const j=i+k;
+      if (j>=0 && j<N && arr[j]!=null){ s+=arr[j]; c++; }
+    }
+    out[i] = c>=2 ? s/c : null;
+  }
+  return out;
+}
+function mkDatasets(map, key, streamers){
+  const ds = [];
+  streamers.forEach(s=>{
+    const raw = (map[s] && map[s][key]) || [];
+    if (showMA){
+      ds.push({ label:s+'·原始', data:raw.slice(winStart,winEnd), borderColor:color(s)+'55',
+        borderWidth:1.2, pointRadius:0, tension:0.2, spanGaps:false, order:2 });
+      ds.push({ label:s+'·7日均', data:makeMA(raw).slice(winStart,winEnd), borderColor:color(s),
+        borderWidth:2.5, pointRadius:0, tension:0.35, spanGaps:false, order:1 });
+    } else {
+      ds.push({ label:s, data:raw.slice(winStart,winEnd), borderColor:color(s),
+        borderWidth:2, pointRadius:0, tension:0.2, spanGaps:false, order:1 });
+    }
+  });
+  return ds;
+}
+function baseOpts(){
+  const step = Math.max(1, Math.ceil((winEnd-winStart)/12));
+  return {
+    responsive:true, maintainAspectRatio:true,
+    interaction:{ intersect:false, mode:'index' },
+    plugins:{ legend:{ labels:{ font:{size:11}, boxWidth:14 } } },
+    scales:{
+      x:{ grid:{display:false}, ticks:{ font:{size:10},
+           callback:function(v){ const i=dates.indexOf(v); return (i<0||(i-winStart)%step!==0)?'':v.slice(5); } } },
+      y:{ grid:{color:'#f0f0f0'}, ticks:{ font:{size:11},
+           callback:function(v){return v.toLocaleString();} } }
+    }
+  };
+}
+function draw(id, type, labels, datasets, opts){
+  const ctx = document.getElementById(id);
+  const old = charts.find(c=>c.canvas.id===id);
+  if (old) old.destroy();
+  const chart = new Chart(ctx, { type:type, data:{labels,datasets},
+    options:Object.assign(baseOpts(), opts||{}) });
+  charts.push(chart);
+}
+function labels(){ return dates.slice(winStart, winEnd); }
+
+function renderAll(){
+  charts.forEach(c=>{ try{c.destroy();}catch(e){} });
+  charts = [];
+  const ss = data.streamers, lab = labels();
+
+  // ① watch_users
+  draw('c1','line', lab, mkDatasets(data.aud,'watch',ss));
+  // ② max_online
+  draw('c2','line', lab, mkDatasets(data.aud,'mx',ss));
+  // ③ all_duration_avg
+  draw('c3','line', lab, mkDatasets(data.aud,'dur',ss));
+  // ④ booster
+  draw('c4','line', lab, mkDatasets(data.boo,'avg',ss));
+  // ⑤ 每日总陪玩：柱 + 7日均线
+  {
+    const ds = [{ label:'每日总陪玩人次', data:data.dboo.slice(winStart,winEnd),
+      backgroundColor:'#2f54eb55', borderColor:'#2f54eb', borderWidth:1, borderRadius:3, order:2 }];
+    if (showMA) ds.push({ label:'7日均', type:'line',
+      data:makeMA(data.dboo).slice(winStart,winEnd), borderColor:'#f5222d', borderWidth:2.5,
+      pointRadius:0, tension:0.35, order:1 });
+    draw('c5','bar', lab, ds);
+  }
+  // ⑥ 钻石 日收入
+  draw('c6','line', lab, mkDatasets(data.dia,'tot',ss));
+  // ⑦ 直播时长
+  draw('c7','line', lab, mkDatasets(data.durs,'h',ss));
+}
+function setRange(days){
+  if (!days){ winStart=0; winEnd=N; }
+  else { winEnd=N; winStart=Math.max(0, winEnd-days); }
+  document.querySelectorAll('.controls button').forEach(b=>b.classList.toggle('active', +b.dataset.days===days));
+  renderAll();
+}
+document.querySelectorAll('.controls button').forEach(b=>b.onclick=()=>setRange(+b.dataset.days));
+document.getElementById('maToggle').onchange=e=>{ showMA=e.target.checked; renderAll(); };
+
+// summary 卡片
+(function(){
+  const s=data.summary, row=document.getElementById('summaryRow');
+  function card(name, val, delta, win){
+    const cls = delta>0?'up':(delta<0?'down':'flat');
+    const arrow = delta>0?'▲':(delta<0?'▼':'—');
+    return '<div class="summary-card"><div class="name">'+name+'</div><div class="val">'+val+'</div>'+
+      '<div class="delta '+cls+'">'+arrow+' '+Math.abs(delta)+'%</div><div class="win">'+win+'</div></div>';
+  }
+  function dlt(a,b){ return a==null||b==null||!b?0:Math.round((a-b)/Math.abs(b)*100); }
+  row.innerHTML =
+    card('全员·近7日日均总陪玩', s.dboo_w1, dlt(s.dboo_w1,s.dboo_w2), s.w1_label+' vs '+s.w2_label) +
+    card('全员·近7日日均钻石', s.dia_w1!=null?s.dia_w1.toLocaleString():'–', dlt(s.dia_w1,s.dia_w2), s.w1_label+' vs '+s.w2_label);
+})();
+
+renderAll();
+</script>
+</body>
+</html>
