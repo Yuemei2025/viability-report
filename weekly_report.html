@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>周维度观众与陪玩分析（有效场次）</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Microsoft YaHei', Arial, sans-serif; }
+.menubar { position:fixed; top:0; left:0; right:0; height:40px; background:#fff; border-bottom:1px solid #e0e0e0;
+  display:flex; align-items:center; gap:4px; padding:0 16px; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.menubar .brand { font-size:14px; font-weight:bold; color:#1a1a1a; margin-right:16px; }
+.menubar .tab { padding:6px 14px; border-radius:4px; font-size:13px; text-decoration:none; color:#333; }
+.menubar .tab:hover { background:#f0f0f0; }
+.menubar .tab.active { background:#2f54eb; color:#fff; }
+body { padding:64px 20px 20px; background:#f5f7fa; color:#1a1a1a; }
+h1 { font-size:22px; margin-bottom:4px; }
+.subtitle { color:#888; font-size:14px; margin-bottom:16px; }
+.summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.summary-card { background:#fff; border-radius:8px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:170px; }
+.summary-card .name { font-size:13px; color:#666; }
+.summary-card .val { font-size:20px; font-weight:bold; margin-top:4px; }
+.summary-card .delta { font-size:12px; margin-top:2px; }
+.summary-card .win { font-size:11px; color:#bbb; margin-top:2px; }
+.down { color:#cf1322; } .up { color:#389e0d; } .flat { color:#8c8c8c; }
+.chart-container { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:24px; }
+.chart-container h2 { font-size:16px; color:#333; margin-bottom:6px; }
+.chart-container .desc { font-size:12px; color:#999; margin-bottom:12px; }
+.chart-wrap { position:relative; width:100%; max-width:920px; margin:0 auto; }
+canvas { width:100% !important; }
+@media (max-width:640px){ body{padding:12px;} .summary-card{min-width:130px;} .chart-wrap{overflow-x:auto;} }
+</style>
+</head>
+<body>
+<div class="menubar">
+  <span class="brand">📊 主播数据分析</span>
+  <a href="viability_report.html" class="tab">分月版</a>
+  <a href="weekly_report.html" class="tab active">分周版</a>
+  <a href="daily_report.html" class="tab">分日版</a>
+</div>
+<h1>📊 周维度观众与陪玩分析（有效场次口径）</h1>
+<div class="subtitle">有效场次 = 时长&gt;1.5h · 数据 2026-06 起 · 自然周(周一~周日) · watch / max_online / 停留时长 / 送礼人数 / 新粉丝数 · 2026-06-01 ~ 2026-08-09</div>
+
+<div class="summary" id="summaryRow"></div>
+
+<div class="chart-container">
+<h2>① 观众·每周场均观看人数（watch_users）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c1"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>② 观众·每周场均峰值在线（max_online）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c2"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>③ 观众·每周场均停留时长（all_duration_avg）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c3"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>④ 陪玩·每周场均陪玩数（booster）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c4"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>⑤ 陪玩·每周总陪玩人次（全员合计）——按周</h2>
+<div class="chart-wrap"><canvas id="c5"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>⑥ 钻石·每周钻石收入（streamer_income tt）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c6"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>⑦ 直播·每周场均直播时长（有效场次，小时）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c7"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>⑧ 送礼·每周场均送礼人数（gift_users）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c8"></canvas></div>
+</div>
+<div class="chart-container">
+<h2>⑨ 粉丝·每周场均新粉丝数（new_fans）——按周 × 主播</h2>
+<div class="chart-wrap"><canvas id="c9"></canvas></div>
+</div>
+
+<script>
+const data = {"week_labels": ["06-01", "06-08", "06-15", "06-22", "06-29", "07-06", "07-13", "07-20", "07-27", "08-03"], "streamers": ["pelun", "pink", "ven", "志青", "阿园", "阿美", "阿贤"], "aud": {"watch": {"pelun": [null, null, null, null, null, null, null, null, null, 5666], "pink": [3782, 4489, 3295, 4643, 4572, 3312, 2758, 4042, 4139, 4026], "ven": [7047, 6651, 5936, 5236, 4030, 4808, 6522, 6308, 4471, 4205], "志青": [12778, 13048, 14089, 15018, 11565, 12333, 12922, 13133, 11036, 11546], "阿园": [5792, 6928, 6103, 5314, 4416, 5136, 5165, 5900, 3980, 4295], "阿美": [6083, 6580, 7356, 8824, 6827, 6184, 6725, 6599, 5191, null], "阿贤": [26209, 28455, 28457, 25493, 30426, 24954, 33887, 20933, 20402, 30766]}, "mx": {"pelun": [null, null, null, null, null, null, null, null, null, 1191], "pink": [985, 1048, 899, 794, 687, 405, 452, 951, 959, 646], "ven": [1375, 1545, 1533, 1142, 988, 1003, 981, 1056, 636, 405], "志青": [3814, 3925, 3827, 3980, 3179, 3115, 3016, 2634, 3284, 2068], "阿园": [1088, 1479, 1475, 1166, 841, 1078, 869, 772, 570, 756], "阿美": [1531, 1532, 1568, 1677, 1459, 1278, 1784, 1461, 1497, null], "阿贤": [7557, 7856, 7938, 7074, 8457, 7394, 7553, 7656, 6444, 5973]}, "dur": {"pelun": [null, null, null, null, null, null, null, null, null, 679], "pink": [930, 751, 1042, 611, 541, 491, 614, 979, 900, 662], "ven": [729, 910, 928, 767, 892, 782, 568, 365, 534, 364], "志青": [960, 1184, 933, 1012, 1012, 1033, 1010, 872, 1313, 671], "阿园": [564, 740, 814, 660, 635, 684, 548, 525, 531, 654], "阿美": [879, 891, 841, 782, 805, 875, 1085, 960, 1261, null], "阿贤": [1164, 1152, 1191, 1200, 1146, 1291, 1266, 1441, 1331, 1175]}, "gift": {"pelun": [null, null, null, null, null, null, null, null, null, 91], "pink": [82, 86, 86, 97, 76, 57, 65, 94, 86, 73], "ven": [119, 106, 135, 141, 119, 113, 99, 98, 104, 77], "志青": [168, 252, 268, 233, 203, 272, 270, 262, 226, 189], "阿园": [90, 103, 128, 93, 75, 99, 80, 114, 76, 91], "阿美": [170, 207, 212, 245, 187, 156, 186, 153, 168, null], "阿贤": [590, 612, 736, 550, 686, 607, 703, 746, 633, 568]}, "nf": {"pelun": [null, null, null, null, null, null, null, null, null, 103], "pink": [20, 22, 16, 27, 19, 11, 12, 30, 19, 14], "ven": [55, 43, 42, 26, 20, 29, 45, 39, 16, 14], "志青": [75, 58, 62, 57, 43, 63, 57, 46, 35, 48], "阿园": [35, 33, 35, 25, 17, 30, 32, 35, 14, 20], "阿美": [22, 30, 28, 27, 21, 20, 28, 23, 14, null], "阿贤": [136, 113, 104, 82, 113, 108, 88, 77, 85, 76]}}, "boo": {"pelun": [null, null, null, null, null, null, null, null, null, 5.4], "pink": [7.9, 7.7, 8.0, 8.0, 8.2, 8.1, 8.6, 8.2, 7.0, 5.4], "ven": [6.9, 8.2, 7.2, 6.9, 7.4, 7.8, 8.3, 7.0, 6.6, 5.1], "志青": [13.2, 12.7, 11.0, 10.8, 11.0, 11.7, 12.2, 13.2, 13.0, 10.6], "阿园": [8.2, 8.2, 9.0, 8.0, 8.2, 7.9, 8.3, 7.7, 7.0, 5.6], "阿美": [8.6, 10.0, 9.7, 11.3, 11.5, 11.9, 11.4, 10.2, 8.6, null], "阿贤": [12.1, 13.8, 14.9, 14.2, 13.8, 12.4, 13.7, 12.0, 12.0, 10.9]}, "durs": {"pelun": [null, null, null, null, null, null, null, null, null, 1.95], "pink": [1.82, 1.77, 1.87, 1.86, 1.92, 1.91, 1.96, 2.02, 1.89, 1.98], "ven": [1.9, 1.88, 1.83, 1.86, 1.83, 1.86, 1.86, 1.92, 1.9, 1.77], "志青": [1.82, 2.04, 2.23, 2.24, 2.04, 2.03, 1.99, 2.18, 2.13, 1.8], "阿园": [1.86, 1.92, 1.85, 1.87, 1.81, 1.78, 1.83, 1.91, 1.82, 1.78], "阿美": [1.73, 1.91, 2.11, 2.24, 2.13, 2.15, 2.0, 1.91, 1.93, null], "阿贤": [1.95, 1.98, 2.19, 2.05, 2.04, 1.95, 2.01, 1.72, 1.86, 1.87]}, "dia": {"pelun": [0, 0, 0, 0, 0, 0, 0, 0, 0, 15655], "pink": [31975, 12776, 25613, 53474, 56347, 128142, 148417, 105572, 64919, 162757], "ven": [35920, 30087, 46643, 70636, 41035, 83061, 113726, 20895, 136151, 59666], "志青": [10448, 20735, 51871, 26310, 153780, 184170, 240480, 152431, 286637, 141073], "阿园": [24053, 25133, 39106, 25117, 43732, 111247, 266039, 42079, 100174, 312994], "阿美": [54922, 34968, 112289, 75145, 98257, 106345, 732576, 216529, 173968, 0], "阿贤": [104858, 97314, 197459, 156086, 223637, 232382, 988033, 19568, 366911, 410475]}, "dboo": [497, 510, 666, 570, 688, 661, 646, 387, 524, 395], "summary": {"dboo_w1": 459.5, "dboo_w2": 516.5, "dia_w1": 1115690, "dia_w2": 1523172, "w1_label": "07-27 ~ 08-09", "w2_label": "07-13 ~ 07-26"}};
+const weeks = data.week_labels;
+const SC = {'阿贤':'#2f54eb','志青':'#52c41a','阿美':'#fa8c16','阿园':'#eb2f96','ven':'#13c2c2','pink':'#722ed1','pelun':'#f5222d','Dory':'#1890ff','peo':'#faad14'};
+function color(s){ return SC[s] || '#999'; }
+function makeChart(id, type, labels, datasets, opts){
+  const ctx = document.getElementById(id);
+  new Chart(ctx, { type:type, data:{labels,datasets},
+    options:Object.assign({
+      responsive:true, maintainAspectRatio:true,
+      interaction:{ intersect:false, mode:'index' },
+      plugins:{ legend:{ labels:{ font:{size:11}, boxWidth:14 } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ font:{size:10} } },
+               y:{ grid:{color:'#f0f0f0'}, ticks:{ font:{size:11},
+                    callback:function(v){return v.toLocaleString();} } } }
+    }, opts||{}) });
+}
+function line(seriesArr){
+  return data.streamers.map(s=>({
+    label:s, data:seriesArr[s], borderColor:color(s), borderWidth:2.2,
+    tension:0.2, pointRadius:3.5, spanGaps:true }));
+}
+// ①~④ ⑥~⑨
+makeChart('c1','line', weeks, line(data.aud.watch));
+makeChart('c2','line', weeks, line(data.aud.mx));
+makeChart('c3','line', weeks, line(data.aud.dur));
+makeChart('c4','line', weeks, line(data.boo));
+makeChart('c6','line', weeks, line(data.dia));
+makeChart('c7','line', weeks, line(data.durs));
+makeChart('c8','line', weeks, line(data.aud.gift));
+makeChart('c9','line', weeks, line(data.aud.nf));
+// ⑤ 每周总陪玩（柱）
+makeChart('c5','bar', weeks, [{
+  label:'每周总陪玩人次', data:data.dboo,
+  backgroundColor:'#2f54eb55', borderColor:'#2f54eb', borderWidth:1, borderRadius:3 }]);
+
+// summary 卡片
+(function(){
+  const s=data.summary, row=document.getElementById('summaryRow');
+  function card(name, val, delta, win){
+    const cls = delta>0?'up':(delta<0?'down':'flat');
+    const arrow = delta>0?'▲':(delta<0?'▼':'—');
+    return '<div class="summary-card"><div class="name">'+name+'</div><div class="val">'+val+'</div>'+
+      '<div class="delta '+cls+'">'+arrow+' '+Math.abs(delta)+'%</div><div class="win">'+win+'</div></div>';
+  }
+  function dlt(a,b){ return a==null||b==null||!b?0:Math.round((a-b)/Math.abs(b)*100); }
+  row.innerHTML =
+    card('全员·近2周每周总陪玩', s.dboo_w1, dlt(s.dboo_w1,s.dboo_w2), s.w1_label+' vs '+s.w2_label) +
+    card('全员·近2周每周钻石', s.dia_w1!=null?s.dia_w1.toLocaleString():'–', dlt(s.dia_w1,s.dia_w2), s.w1_label+' vs '+s.w2_label);
+})();
+</script>
+</body>
+</html>
