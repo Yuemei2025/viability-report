@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Miki 五场直播数据分析（2026-08-06 ~ 08-11）</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Microsoft YaHei', Arial, sans-serif; }
+.menubar { position:fixed; top:0; left:0; right:0; height:40px; background:#fff; border-bottom:1px solid #e0e0e0;
+  display:flex; align-items:center; gap:4px; padding:0 16px; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.menubar .brand { font-size:14px; font-weight:bold; color:#1a1a1a; }
+body { padding:64px 20px 20px; background:#f5f7fa; color:#1a1a1a; }
+h1 { font-size:22px; margin-bottom:4px; }
+.subtitle { color:#888; font-size:14px; margin-bottom:16px; }
+.summary { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.summary-card { background:#fff; border-radius:8px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:160px; }
+.summary-card .name { font-size:13px; color:#666; }
+.summary-card .val { font-size:20px; font-weight:bold; margin-top:4px; }
+.summary-card .delta { font-size:12px; color:#999; margin-top:2px; }
+.chart-container { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:24px; }
+.chart-container h2 { font-size:16px; color:#333; margin-bottom:6px; }
+.chart-container .desc { font-size:12px; color:#999; margin-bottom:12px; }
+.chart-wrap { position:relative; width:100%; max-width:920px; margin:0 auto; }
+canvas { width:100% !important; }
+.finds { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.finds h2 { font-size:16px; color:#333; margin-bottom:10px; }
+.finds li { font-size:13px; color:#444; line-height:1.9; margin-left:18px; }
+@media (max-width:640px){ body{padding:12px;} .summary-card{min-width:130px;} }
+</style>
+</head>
+<body>
+<div class="menubar"><span class="brand">📊 主播数据分析 · Miki 专场</span></div>
+<h1>📊 Miki 五场直播数据分析（2026-08-06 ~ 08-11）</h1>
+<div class="subtitle">马来西亚直播 · 数据源 miki_streamer_live.csv · 5 场（8.6/8.7/8.9/8.10/8.11，8.8 缺席）· 查看需联网加载 Chart.js</div>
+
+<div class="summary" id="summaryRow"></div>
+
+<div class="chart-container">
+<h2>① 流量·总观看次数 vs 不重复观众数</h2>
+<div class="desc">总观看含重复进出，不重复观众为独立访客。8.10 为高峰（3306 / 2707）。</div>
+<div class="chart-wrap"><canvas id="c1"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>② 人气·最高同时在线 vs 平均同时在线</h2>
+<div class="desc">8.7 峰值在线 226 人为 5 场最高；平均在线逐场走高至 8.10 的 101 人。</div>
+<div class="chart-wrap"><canvas id="c2"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>③ 互动·评论数 vs 活跃观众数</h2>
+<div class="desc">活跃看播观众 = 高活跃用户；评论 8.10 破千（1071）。</div>
+<div class="chart-wrap"><canvas id="c3"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>④ 传播·获赞数 vs 分享次数</h2>
+<div class="desc">获赞 8.9 达峰值 24816；分享 8.10 最高（37 次）。量级悬殊，用双轴。</div>
+<div class="chart-wrap"><canvas id="c4"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑤ 粉丝·每日新增 vs 累计</h2>
+<div class="desc">单场新增粉丝峰值 153（8.9），5 场累计 490 粉。</div>
+<div class="chart-wrap"><canvas id="c5"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑥ 收益·钻石数 vs 送礼人数</h2>
+<div class="desc">钻石收益 8.7 最高（212），送礼人数峰值 19（8.9）。</div>
+<div class="chart-wrap"><canvas id="c6"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑦ 时长·场均直播时长(分钟) vs 平均观看时长(秒)</h2>
+<div class="desc">8.11 为 60min 短场；平均观看时长 8.6 最长（155 秒 ≈ 2分35秒）。</div>
+<div class="chart-wrap"><canvas id="c7"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑧ 转化·场均漏斗（观看 → 不重复 → 活跃 → 送礼）</h2>
+<div class="desc">5 场均值：2323 次观看中仅 169 名活跃观众、12 名送礼观众，转化集中在「观看→进入」阶段。</div>
+<div class="chart-wrap"><canvas id="c8"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑨ 转化·5 天转化率趋势</h2>
+<div class="desc">粉丝转化率 = 新增粉丝/不重复观众；活跃占比 = 活跃观众/不重复观众；送礼转化 = 送礼人数/不重复观众。</div>
+<div class="chart-wrap"><canvas id="c9"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑩ 赛道排位·各指标领先同水平主播占比(%)</h2>
+<div class="desc">5 天 × 5 项领先占比；观看领先仅 8.10 有值（99%）。</div>
+<div class="chart-wrap"><canvas id="c10"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑪ 画像·流量入口构成（横向堆叠 %）</h2>
+<div class="desc">直播推荐是绝对主力入口（82%~90%），短视频推荐与已关注贡献极少。横向堆叠：每行一场直播，各入口沿 X 轴堆叠到 100%。</div>
+<div class="chart-wrap"><canvas id="c11"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑫ 画像·观众地域分布（横向堆叠 %）</h2>
+<div class="desc">马来西亚为主场（29%~50%），越南与台湾次之，其余地区零星。横向堆叠：每行一场直播，各地域占比堆叠到 100%。</div>
+<div class="chart-wrap"><canvas id="c12"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑬ 画像·观众年龄构成（横向堆叠 %）</h2>
+<div class="desc">25-34 岁为主力人群（51%~58%），35+ 次之，18-24 岁占比低。横向堆叠：每行一场直播，各年龄占比堆叠到 100%。</div>
+<div class="chart-wrap"><canvas id="c13"></canvas></div>
+</div>
+
+<div class="chart-container">
+<h2>⑭ 画像·观众性别构成（横向堆叠 %）</h2>
+<div class="desc">男性观众 64%~74% 占主导。横向堆叠：每行一场直播，性别占比堆叠到 100%。</div>
+<div class="chart-wrap"><canvas id="c14"></canvas></div>
+</div>
+
+<div class="finds">
+<h2>🔍 关键发现</h2>
+<ul id="findsList"></ul>
+</div>
+
+<script>
+const DATA = {"labels": ["08-06", "08-07", "08-09", "08-10", "08-11"], "views": [655, 2948, 3397, 3306, 1311], "unique": [506, 2355, 2806, 2707, 1059], "maxo": [42, 226, 156, 145, 84], "avgo": [13, 65, 96, 101, 62], "com": [117, 411, 816, 1071, 431], "active": [57, 132, 262, 281, 115], "likes": [8339, 14561, 24816, 13415, 3270], "shares": [3, 20, 16, 37, 4], "nf": [48, 114, 153, 135, 40], "cum": [48, 162, 315, 450, 490], "dia": [27, 212, 62, 108, 51], "gift": [6, 12, 19, 13, 10], "dur": [122, 118, 118, 120, 60], "aw": [155, 91, 147, 128, 147], "rankLabels": ["时长", "评论", "送礼", "获赞", "观看"], "rank": [[96, 94, 98, 97, null], [96, 98, 99, 98, null], [96, 99, 99, 99, null], [96, 99, 99, 98, 99], [91, 99, 99, 94, null]], "entry": {"cols": ["直播推荐", "短视频推荐", "已关注", "分享入口", "其它入口"], "rows": [[90, 0, 3, 1, 4], [87, 0, 5, 0, 6], [86, 0, 3, 0, 8], [87, 1, 5, 0, 5], [82, 1, 9, 0, 5]]}, "geo": {"cols": ["马来西亚", "越南", "台湾", "韩国", "日本", "新加坡", "其它"], "rows": [[50, 24, 18, 2, 0, 0, 6], [42, 34, 18, 0, 1, 0, 5], [45, 11, 39, 0, 0, 1, 4], [32, 21, 41, 0, 0, 1, 5], [29, 19, 46, 0, 0, 1, 5]]}, "age": {"cols": ["18-24岁", "25-34岁", "35+岁"], "rows": [[9, 51, 40], [8, 53, 39], [7, 51, 42], [8, 55, 37], [8, 58, 34]]}, "gender": {"cols": ["男性", "女性"], "rows": [[71, 28], [64, 35], [74, 25], [71, 28], [72, 27]]}, "funnel": [2323, 1887, 169, 12], "conv": {"active": [11.3, 5.6, 9.3, 10.4, 10.9], "gift": [1.2, 0.5, 0.7, 0.5, 0.9], "fan": [9.5, 4.8, 5.5, 5.0, 3.8]}, "summary": {"views": 11617, "unique": 9433, "nf": 490, "dia": 460, "com": 2846, "likes": 64401, "gift": 60, "dur": 538, "avg_watch": 134, "peak_maxo": 226, "n": 5, "avg_dur": 108}, "peak": {"总观看": "08-09", "评论数": "08-10", "获赞数": "08-09", "新增粉丝": "08-09", "钻石": "08-07", "最高同时在线": "08-07"}, "finds": ["累计 5 场：总观看 11,617，不重复观众 9,433，新增粉丝 490，钻石 460，评论 2,846，获赞 64,401，送礼人次 60。", "单场峰值：观看 08-09（3,397）｜评论 08-10（1071）｜获赞 08-09（24,816）｜新增粉 08-09（153）｜钻石 08-07（212）｜同时在线 08-07（226）。", "8.11 为短场（60min，仅前 4 场的一半），各指标明显回落；8.8 整日缺席（可能休息）。", "转化率：粉丝转化率（新粉/不重复观众）首场 8.6 最高 9.5%，其后 3.8%~5.5%；活跃观众占比 5.6%~11.3%；送礼转化率 0.5%~1.2%。", "场均获赞 12,880，场均礼物 92.0 钻，平均观看时长 134s（约 2.2 分钟）。", "画像特征：流量入口 82%~90% 来自直播推荐；地域以马来西亚（29%~50%）+ 越南 + 台湾为主；主力人群 25-34 岁（51%~58%）；男性观众 64%~74% 占主导。"]};
+const PAL = ['#2f54eb','#52c41a','#fa8c16','#eb2f96','#13c2c2','#722ed1','#f5222d','#1890ff','#faad14','#a0d911'];
+// baseOpts 用函数返回新对象：Chart.js 会原地修改传入的 options.scales，
+// 共享的 baseOpts 对象会被前序图表污染（实测导致 c8 水平漏斗图 y 轴被错判为 linear 而空白）
+const baseOpts = () => ({ responsive:true, maintainAspectRatio:true,
+  plugins:{ legend:{ labels:{ font:{ size:12 } } }, tooltip:{ titleFont:{size:13}, bodyFont:{size:12} } },
+  scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } });
+
+// 概览卡片
+(function(){
+  const s = DATA.summary;
+  const cards = [
+    ['总观看', s.views.toLocaleString(), s.n + ' 场累计'],
+    ['不重复观众', s.unique.toLocaleString(), '5 场合计（含重复访客重叠）'],
+    ['新增粉丝', s.nf, '场均 ' + Math.round(s.nf/s.n)],
+    ['钻石收入', s.dia, '送礼 ' + s.gift + ' 人次'],
+    ['评论数', s.com.toLocaleString(), '获赞 ' + s.likes.toLocaleString()],
+    ['峰值同时在线', s.peak_maxo, '场均时长 ' + s.avg_dur + 'min'],
+    ['平均观看时长', s.avg_watch + 's', '约 ' + (s.avg_watch/60).toFixed(1) + ' 分钟'],
+  ];
+  const row = document.getElementById('summaryRow');
+  cards.forEach(([name, val, delta]) => {
+    const d = document.createElement('div');
+    d.className = 'summary-card';
+    d.innerHTML = `<div class="name">${name}</div><div class="val">${val}</div><div class="delta">${delta}</div>`;
+    row.appendChild(d);
+  });
+})();
+
+function mk(id, cfg){ new Chart(document.getElementById(id), cfg); }
+
+// 横向 100% 堆叠条形图（标准构成堆叠）：Y 轴=日期，各构成项沿 X 轴堆叠到 100%
+function stackH(id, cols, rows){
+  mk(id, { type:'bar',
+    data:{ labels:DATA.labels, datasets: cols.map((c,i)=>({ label:c, data:rows.map(r=>r[i]), backgroundColor:PAL[i%PAL.length]+'cc' })) },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:true,
+      scales:{ x:{ stacked:true, beginAtZero:true, max:100, ticks:{ callback:(v)=>v+'%' } },
+               y:{ stacked:true } },
+      plugins:{ legend:{ labels:{ font:{ size:12 } } },
+        tooltip:{ callbacks:{ label:(c)=>` ${c.dataset.label} ${c.parsed.x}%` } } } } });
+}
+
+// ① 流量
+mk('c1', { type:'line',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'总观看次数', data:DATA.views, borderColor:PAL[0], backgroundColor:PAL[0]+'22', tension:.3, fill:true, pointRadius:4 },
+    { label:'不重复观众数', data:DATA.unique, borderColor:PAL[6], backgroundColor:PAL[6]+'22', tension:.3, fill:false, pointRadius:4 },
+  ]}, options:baseOpts() });
+
+// ② 人气
+mk('c2', { type:'line',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'最高同时在线', data:DATA.maxo, borderColor:PAL[2], tension:.3, pointRadius:4 },
+    { label:'平均同时在线', data:DATA.avgo, borderColor:PAL[3], tension:.3, pointRadius:4 },
+  ]}, options:baseOpts() });
+
+// ③ 互动（双轴）
+mk('c3', { type:'bar',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'评论数', data:DATA.com, backgroundColor:PAL[0]+'cc', yAxisID:'y' },
+    { label:'活跃观众数', data:DATA.active, type:'line', borderColor:PAL[1], backgroundColor:PAL[1], tension:.3, yAxisID:'y1', pointRadius:4 },
+  ]}, options:{ responsive:true,
+    scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false} } } } });
+
+// ④ 获赞/分享（双轴）
+mk('c4', { type:'bar',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'获赞数', data:DATA.likes, backgroundColor:PAL[3]+'cc', yAxisID:'y' },
+    { label:'分享次数', data:DATA.shares, type:'line', borderColor:PAL[8], backgroundColor:PAL[8], tension:.3, yAxisID:'y1', pointRadius:4 },
+  ]}, options:{ responsive:true,
+    scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false} } } } });
+
+// ⑤ 粉丝增长（双轴）
+mk('c5', { type:'bar',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'每日新增粉丝', data:DATA.nf, backgroundColor:PAL[1]+'cc', yAxisID:'y' },
+    { label:'累计粉丝', data:DATA.cum, type:'line', borderColor:PAL[0], tension:.3, yAxisID:'y1', pointRadius:4 },
+  ]}, options:{ responsive:true,
+    scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false} } } } });
+
+// ⑥ 钻石/送礼（双轴）
+mk('c6', { type:'bar',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'钻石数', data:DATA.dia, backgroundColor:PAL[2]+'cc', yAxisID:'y' },
+    { label:'送礼人数', data:DATA.gift, type:'line', borderColor:PAL[4], backgroundColor:PAL[4], tension:.3, yAxisID:'y1', pointRadius:4 },
+  ]}, options:{ responsive:true,
+    scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false} } } } });
+
+// ⑦ 时长（双轴）
+mk('c7', { type:'bar',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'直播时长(分钟)', data:DATA.dur, backgroundColor:PAL[5]+'cc', yAxisID:'y' },
+    { label:'平均观看时长(秒)', data:DATA.aw, type:'line', borderColor:PAL[6], backgroundColor:PAL[6], tension:.3, yAxisID:'y1', pointRadius:4 },
+  ]}, options:{ responsive:true,
+    scales:{ y:{ beginAtZero:true }, y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false} } } } });
+
+// ⑧ 漏斗
+mk('c8', { type:'bar',
+  data:{ labels:['总观看','不重复观众','活跃观众','送礼人数'], datasets:[
+    { label:'场均人数', data:DATA.funnel, backgroundColor:[PAL[0],PAL[1],PAL[2],PAL[3]] } ]},
+  options:{ ...baseOpts(), indexAxis:'y', scales:{ x:{ beginAtZero:true, ticks:{ precision:0 } }, y:{} },
+    plugins:{ ...baseOpts().plugins, legend:{ display:false }, tooltip:{ callbacks:{ label:(c)=>' 场均 '+c.parsed.x+' 人' } } } } });
+
+// ⑨ 转化率
+mk('c9', { type:'line',
+  data:{ labels:DATA.labels, datasets:[
+    { label:'活跃观众占比 %', data:DATA.conv.active, borderColor:PAL[0], tension:.3, pointRadius:4 },
+    { label:'粉丝转化率 %', data:DATA.conv.fan, borderColor:PAL[1], tension:.3, pointRadius:4 },
+    { label:'送礼转化率 %', data:DATA.conv.gift, borderColor:PAL[2], tension:.3, pointRadius:4 },
+  ]}, options:baseOpts() });
+
+// ⑩ 赛道排位（分组柱）
+mk('c10', { type:'bar',
+  data:{ labels:DATA.rankLabels, datasets: DATA.labels.map((l,i)=>({ label:l, data:DATA.rank[i], backgroundColor:PAL[i%PAL.length]+'cc' })) },
+  options:{ ...baseOpts(), scales:{ y:{ beginAtZero:true, max:100, ticks:{ precision:0, callback:(v)=>v+'%' } } } } });
+
+// ⑪ 流量入口（横向堆叠）
+stackH('c11', DATA.entry.cols, DATA.entry.rows);
+
+// ⑫ 地域（横向堆叠）
+stackH('c12', DATA.geo.cols, DATA.geo.rows);
+
+// ⑬ 年龄（横向堆叠）
+stackH('c13', DATA.age.cols, DATA.age.rows);
+
+// ⑭ 性别（横向堆叠）
+stackH('c14', DATA.gender.cols, DATA.gender.rows);
+
+// 关键发现
+(function(){
+  const ul = document.getElementById('findsList');
+  DATA.finds.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+})();
+</script>
+</body>
+</html>
